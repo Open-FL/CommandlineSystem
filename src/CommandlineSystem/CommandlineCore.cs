@@ -9,12 +9,29 @@ namespace CommandlineSystem
     public static class CommandlineCore
     {
 
+        private class HelpSystem : ICommandlineSystem
+        {
+
+            public string Name => "help";
+
+            public void Run(string[] args)
+            {
+                foreach (ICommandlineSystem commandlineSystem in Tools)
+                {
+                    Console.WriteLine($"Tool: {Path.GetFileName(Assembly.GetEntryAssembly().CodeBase)} {commandlineSystem.Name}");
+                }
+            }
+
+        }
+
+        private static ICommandlineSystem[] Tools;
+
         public static void Run(string[] args)
         {
             if (args.Length != 0)
             {
-                ICommandlineSystem[] tools = GetSystemsTools();
-                ICommandlineSystem selected = tools.FirstOrDefault(x => x.Name == args[0]);
+                Tools = GetSystemsTools();
+                ICommandlineSystem selected = Tools.FirstOrDefault(x => x.Name == args[0]);
                 selected?.Run(args.Skip(1).ToArray());
             }
             else
@@ -49,6 +66,7 @@ namespace CommandlineSystem
         private static ICommandlineSystem[] GetSystemsTools()
         {
             List<ICommandlineSystem> tools = new List<ICommandlineSystem>();
+            tools.Add(new HelpSystem());
             Assembly asmbly = Assembly.GetExecutingAssembly();
             string path = Path.Combine(
                                        Path.GetDirectoryName(
