@@ -48,9 +48,10 @@ namespace CommandlineSystem
         private static ICommandlineSystem[] GetSystemsTools()
         {
             List<ICommandlineSystem> tools = new List<ICommandlineSystem>();
+            Assembly asmbly = Assembly.GetExecutingAssembly();
             string path = Path.Combine(
                                        Path.GetDirectoryName(
-                                                             new Uri(Assembly.GetExecutingAssembly().Location)
+                                                             new Uri(asmbly.CodeBase)
                                                                  .AbsolutePath
                                                             ),
                                        "systems"
