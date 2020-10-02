@@ -13,7 +13,7 @@ namespace CommandlineSystem
         {
             if (args.Length != 0)
             {
-                ICommandlineSystem[] tools = GetBuildTools();
+                ICommandlineSystem[] tools = GetSystemsTools();
                 ICommandlineSystem selected = tools.FirstOrDefault(x => x.Name == args[0]);
                 selected?.Run(args.Skip(1).ToArray());
             }
@@ -27,7 +27,7 @@ namespace CommandlineSystem
 #endif
         }
 
-        private static ICommandlineSystem[] GetBuildTools(Assembly target)
+        private static ICommandlineSystem[] GetSystemsTools(Assembly target)
         {
             Type[] asmTypes = target
                               .GetTypes().Where(
@@ -45,7 +45,7 @@ namespace CommandlineSystem
             return ret;
         }
 
-        private static ICommandlineSystem[] GetBuildTools()
+        private static ICommandlineSystem[] GetSystemsTools()
         {
             List<ICommandlineSystem> tools = new List<ICommandlineSystem>();
             string path = Path.Combine(
@@ -67,7 +67,7 @@ namespace CommandlineSystem
                 try
                 {
                     Assembly asm = Assembly.LoadFrom(file);
-                    tools.AddRange(GetBuildTools(asm));
+                    tools.AddRange(GetSystemsTools(asm));
                 }
                 catch (Exception e)
                 {
