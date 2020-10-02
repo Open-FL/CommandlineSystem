@@ -23,6 +23,7 @@ namespace CommandlineSystem
             }
 
 #if DEBUG
+            System.Console.WriteLine("Press any key to exit..");
             System.Console.ReadLine();
 #endif
         }
