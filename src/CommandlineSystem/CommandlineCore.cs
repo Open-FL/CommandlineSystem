@@ -37,6 +37,7 @@ namespace CommandlineSystem
             else
             {
                 System.Console.WriteLine("Argument Mismatch");
+                Tools.First(x=>x is HelpSystem).Run(new string[0]);
             }
 
 #if DEBUG
