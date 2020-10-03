@@ -1,13 +1,122 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
+using System.Net;
 using System.Reflection;
+using System.Runtime.Serialization;
 
 namespace CommandlineSystem
 {
+    internal enum UpdateType
+    {
+
+        Self,
+        Systems
+
+    }
+
+    internal static class Bootstrap
+    {
+
+        public static void Update(UpdateType type, string url)
+        {
+            string pathAddition = type == UpdateType.Systems ? "systems" : null;
+            InitiateBatchUpdate(type.ToString(), url, pathAddition);
+        }
+
+        private static void InitiateBatchUpdate(string type, string url, string pathAddition)
+        {
+            string tempPath = Path.Combine(Path.GetTempPath(), Assembly.GetEntryAssembly().GetName().FullName, type);
+            string selfTarget = Path.GetDirectoryName(new Uri(Assembly.GetEntryAssembly().CodeBase).AbsolutePath);
+            string downloadTarget = Path.Combine(tempPath, "update.zip");
+            string extractTarget = Path.Combine(tempPath, "update");
+            string updateBatchTarget = Path.Combine(tempPath, "update.bat");
+
+
+            if (Directory.Exists(tempPath)) Directory.Delete(tempPath, true);
+            Directory.CreateDirectory(tempPath);
+
+
+            Directory.CreateDirectory(extractTarget);
+
+            DownloadFile(url, downloadTarget);
+
+            ZipFile.ExtractToDirectory(downloadTarget, extractTarget);
+
+            File.Delete(downloadTarget);
+
+            List<string> batchUpdate = new List<string>
+                                       {
+                                           "@ECHO OFF",
+                                           ":LOOP",
+                                           $"tasklist | find /i \"{Process.GetCurrentProcess().Id}\" >nul 2>&1",
+                                           "IF ERRORLEVEL 1 (",
+                                           "GOTO CONTINUE",
+                                           ") ELSE (",
+                                           $"echo Waiting for Process {Process.GetCurrentProcess().Id} to Close for Automatic Update",
+                                           "Timeout /T 5 /Nobreak",
+                                           "GOTO LOOP",
+                                           ")",
+                                           ":CONTINUE",
+                                           $"xcopy {extractTarget} {Path.Combine(selfTarget, pathAddition??"")} /e /q /y",
+                                           "echo Update Complete.",
+                                           $"ping localhost -n 2 > NUL",
+                                           $"del {updateBatchTarget}"
+                                       };
+            File.WriteAllLines(updateBatchTarget, batchUpdate);
+            Process.Start("cmd.exe", $"/C call {updateBatchTarget}");
+        }
+
+        private static void DownloadFile(string url, string target)
+        {
+            using (WebClient wc = new WebClient())
+            {
+                wc.DownloadFile(url, target);
+            }
+        }
+
+    }
+
     public static class CommandlineCore
     {
+
+        private class BootstrapSystem : ICommandlineSystem
+        {
+
+            public string Name => "update";
+
+            public void Run(string[] args)
+            {
+                foreach (string s in args)
+                {
+                    if (Enum.TryParse(s, true, out UpdateType type))
+                    {
+                        if (type == UpdateType.Self && ApplicationUpdateUrl == null || 
+                            type == UpdateType.Systems && SystemUpdateUrl == null)
+                        {
+                            Console.WriteLine($"Can not Update {type}, no URL provided.");
+                        }
+                        else if (type == UpdateType.Self)
+                        {
+                            Bootstrap.Update(type, ApplicationUpdateUrl);
+                        }
+                        else if (type == UpdateType.Systems)
+                        {
+                            Bootstrap.Update(type, SystemUpdateUrl);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Can not parse: {s}");
+                    }
+                }
+            }
+
+        }
+
 
         private class HelpSystem : ICommandlineSystem
         {
@@ -25,9 +134,13 @@ namespace CommandlineSystem
         }
 
         private static ICommandlineSystem[] Tools;
+        private static string ApplicationUpdateUrl;
+        private static string SystemUpdateUrl;
 
-        public static void Run(string[] args)
+        public static void Run(string[] args, string applicationUpdateUrl = null, string systemUpdateUrl=null)
         {
+            ApplicationUpdateUrl = applicationUpdateUrl;
+            SystemUpdateUrl = systemUpdateUrl;
             if (args.Length != 0)
             {
                 Tools = GetSystemsTools();
@@ -37,7 +150,7 @@ namespace CommandlineSystem
             else
             {
                 System.Console.WriteLine("Argument Mismatch");
-                Tools.First(x=>x is HelpSystem).Run(new string[0]);
+                Tools.First(x => x is HelpSystem).Run(new string[0]);
             }
 
 #if DEBUG
@@ -68,6 +181,7 @@ namespace CommandlineSystem
         {
             List<ICommandlineSystem> tools = new List<ICommandlineSystem>();
             tools.Add(new HelpSystem());
+            tools.Add(new BootstrapSystem());
             Assembly asmbly = Assembly.GetExecutingAssembly();
             string path = Path.Combine(
                                        Path.GetDirectoryName(
