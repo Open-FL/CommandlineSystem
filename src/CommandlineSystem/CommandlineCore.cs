@@ -29,8 +29,9 @@ namespace CommandlineSystem
 
         private static void InitiateBatchUpdate(string type, string url, string pathAddition)
         {
-            string tempPath = Path.Combine(Path.GetTempPath(), Assembly.GetEntryAssembly().GetName().FullName, type);
+            string tempPath = Path.Combine(Path.GetTempPath(), Assembly.GetEntryAssembly().GetName().Name, type);
             string selfTarget = Path.GetDirectoryName(new Uri(Assembly.GetEntryAssembly().CodeBase).AbsolutePath);
+            string logTarget = Path.Combine(selfTarget, $"update_{type}.log");
             string downloadTarget = Path.Combine(tempPath, "update.zip");
             string extractTarget = Path.Combine(tempPath, "update");
             string updateBatchTarget = Path.Combine(tempPath, "update.bat");
@@ -50,24 +51,28 @@ namespace CommandlineSystem
 
             List<string> batchUpdate = new List<string>
                                        {
-                                           "@ECHO OFF",
-                                           ":LOOP",
+                                           $"@ECHO OFF",
+                                           $"echo Waiting for Process {Process.GetCurrentProcess().Id} to Close for Automatic Update>>{logTarget}",
+                                           $":LOOP",
                                            $"tasklist | find /i \"{Process.GetCurrentProcess().Id}\" >nul 2>&1",
-                                           "IF ERRORLEVEL 1 (",
-                                           "GOTO CONTINUE",
-                                           ") ELSE (",
-                                           $"echo Waiting for Process {Process.GetCurrentProcess().Id} to Close for Automatic Update",
-                                           "Timeout /T 5 /Nobreak",
-                                           "GOTO LOOP",
-                                           ")",
-                                           ":CONTINUE",
-                                           $"xcopy {extractTarget} {Path.Combine(selfTarget, pathAddition??"")} /e /q /y",
-                                           "echo Update Complete.",
+                                           $"IF ERRORLEVEL 1 (",
+                                           $"GOTO CONTINUE",
+                                           $") ELSE (",
+                                           $"Timeout /T 5 /Nobreak",
+                                           $"GOTO LOOP",
+                                           $")",
+                                           $":CONTINUE",
+                                           $"echo Updating>>{logTarget}",
+                                           $"xcopy {extractTarget} {Path.Combine(selfTarget, pathAddition??"")} /e /f /y>>{logTarget}",
+                                           $"echo Update Complete.>>{logTarget}",
                                            $"ping localhost -n 2 > NUL",
                                            $"del {updateBatchTarget}"
                                        };
             File.WriteAllLines(updateBatchTarget, batchUpdate);
-            Process.Start("cmd.exe", $"/C call {updateBatchTarget}");
+            ProcessStartInfo info = new ProcessStartInfo("cmd.exe", $"/C call {updateBatchTarget}");
+            info.CreateNoWindow = true;
+            info.UseShellExecute = false;
+            Process.Start(info);
         }
 
         private static void DownloadFile(string url, string target)
