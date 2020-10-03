@@ -146,9 +146,9 @@ namespace CommandlineSystem
         {
             ApplicationUpdateUrl = applicationUpdateUrl;
             SystemUpdateUrl = systemUpdateUrl;
+            Tools = GetSystemsTools();
             if (args.Length != 0)
             {
-                Tools = GetSystemsTools();
                 ICommandlineSystem selected = Tools.FirstOrDefault(x => x.Name == args[0]);
                 selected?.Run(args.Skip(1).ToArray());
             }
