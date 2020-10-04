@@ -198,7 +198,7 @@ namespace CommandlineSystem
             if (!Directory.Exists(path))
             {
                 Directory.CreateDirectory(path);
-                return new ICommandlineSystem[0];
+                return tools.ToArray();
             }
 
             string[] files = Directory.GetFiles(path, "*.dll", SearchOption.AllDirectories);
