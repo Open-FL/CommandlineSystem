@@ -58,7 +58,7 @@ namespace CommandlineSystem
                                            $"IF ERRORLEVEL 1 (",
                                            $"GOTO CONTINUE",
                                            $") ELSE (",
-                                           $"Timeout /T 5 /Nobreak",
+                                           $"Timeout /T 1 /Nobreak",
                                            $"GOTO LOOP",
                                            $")",
                                            $":CONTINUE",
