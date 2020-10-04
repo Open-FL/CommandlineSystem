@@ -10,7 +10,7 @@ using System.Runtime.Serialization;
 
 namespace CommandlineSystem
 {
-    internal enum UpdateType
+    public enum UpdateType
     {
 
         Self,
@@ -18,7 +18,7 @@ namespace CommandlineSystem
 
     }
 
-    internal static class Bootstrap
+    public static class Bootstrap
     {
 
         public static void Update(UpdateType type, string url)
@@ -27,7 +27,7 @@ namespace CommandlineSystem
             InitiateBatchUpdate(type.ToString(), url, pathAddition);
         }
 
-        private static void InitiateBatchUpdate(string type, string url, string pathAddition)
+        public static void InitiateBatchUpdate(string type, string url, string pathAddition)
         {
             string tempPath = Path.Combine(Path.GetTempPath(), Assembly.GetEntryAssembly().GetName().Name, type);
             string selfTarget = Path.GetDirectoryName(new Uri(Assembly.GetEntryAssembly().CodeBase).AbsolutePath);
