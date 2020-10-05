@@ -6,7 +6,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Reflection;
-using System.Runtime.Serialization;
 
 namespace CommandlineSystem
 {
@@ -37,7 +36,11 @@ namespace CommandlineSystem
             string updateBatchTarget = Path.Combine(tempPath, "update.bat");
 
 
-            if (Directory.Exists(tempPath)) Directory.Delete(tempPath, true);
+            if (Directory.Exists(tempPath))
+            {
+                Directory.Delete(tempPath, true);
+            }
+
             Directory.CreateDirectory(tempPath);
 
 
@@ -51,21 +54,21 @@ namespace CommandlineSystem
 
             List<string> batchUpdate = new List<string>
                                        {
-                                           $"@ECHO OFF",
+                                           "@ECHO OFF",
                                            $"echo Waiting for Process {Process.GetCurrentProcess().Id} to Close for Automatic Update>>{logTarget}",
-                                           $":LOOP",
+                                           ":LOOP",
                                            $"tasklist | find /i \"{Process.GetCurrentProcess().Id}\" >nul 2>&1",
-                                           $"IF ERRORLEVEL 1 (",
-                                           $"GOTO CONTINUE",
-                                           $") ELSE (",
-                                           $"Timeout /T 1 /Nobreak",
-                                           $"GOTO LOOP",
-                                           $")",
-                                           $":CONTINUE",
+                                           "IF ERRORLEVEL 1 (",
+                                           "GOTO CONTINUE",
+                                           ") ELSE (",
+                                           "Timeout /T 1 /Nobreak",
+                                           "GOTO LOOP",
+                                           ")",
+                                           ":CONTINUE",
                                            $"echo Updating>>{logTarget}",
-                                           $"xcopy {extractTarget} {Path.Combine(selfTarget, pathAddition??"")} /e /f /y>>{logTarget}",
+                                           $"xcopy {extractTarget} {Path.Combine(selfTarget, pathAddition ?? "")} /e /f /y>>{logTarget}",
                                            $"echo Update Complete.>>{logTarget}",
-                                           $"ping localhost -n 2 > NUL",
+                                           "ping localhost -n 2 > NUL",
                                            $"del {updateBatchTarget}"
                                        };
             File.WriteAllLines(updateBatchTarget, batchUpdate);
@@ -88,61 +91,11 @@ namespace CommandlineSystem
     public static class CommandlineCore
     {
 
-        private class BootstrapSystem : ICommandlineSystem
-        {
-
-            public string Name => "update";
-
-            public void Run(string[] args)
-            {
-                foreach (string s in args)
-                {
-                    if (Enum.TryParse(s, true, out UpdateType type))
-                    {
-                        if (type == UpdateType.Self && ApplicationUpdateUrl == null || 
-                            type == UpdateType.Systems && SystemUpdateUrl == null)
-                        {
-                            Console.WriteLine($"Can not Update {type}, no URL provided.");
-                        }
-                        else if (type == UpdateType.Self)
-                        {
-                            Bootstrap.Update(type, ApplicationUpdateUrl);
-                        }
-                        else if (type == UpdateType.Systems)
-                        {
-                            Bootstrap.Update(type, SystemUpdateUrl);
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine($"Can not parse: {s}");
-                    }
-                }
-            }
-
-        }
-
-
-        private class HelpSystem : ICommandlineSystem
-        {
-
-            public string Name => "help";
-
-            public void Run(string[] args)
-            {
-                foreach (ICommandlineSystem commandlineSystem in Tools)
-                {
-                    Console.WriteLine($"Tool: {Path.GetFileName(Assembly.GetEntryAssembly().CodeBase)} {commandlineSystem.Name}");
-                }
-            }
-
-        }
-
         private static ICommandlineSystem[] Tools;
         private static string ApplicationUpdateUrl;
         private static string SystemUpdateUrl;
 
-        public static void Run(string[] args, string applicationUpdateUrl = null, string systemUpdateUrl=null)
+        public static void Run(string[] args, string applicationUpdateUrl = null, string systemUpdateUrl = null)
         {
             ApplicationUpdateUrl = applicationUpdateUrl;
             SystemUpdateUrl = systemUpdateUrl;
@@ -154,13 +107,13 @@ namespace CommandlineSystem
             }
             else
             {
-                System.Console.WriteLine("Argument Mismatch");
+                Console.WriteLine("Argument Mismatch");
                 Tools.First(x => x is HelpSystem).Run(new string[0]);
             }
 
 #if DEBUG
-            System.Console.WriteLine("Press any key to exit..");
-            System.Console.ReadLine();
+            Console.WriteLine("Press any key to exit..");
+            Console.ReadLine();
 #endif
         }
 
@@ -176,7 +129,7 @@ namespace CommandlineSystem
             for (int i = 0; i < asmTypes.Length; i++)
             {
                 Type asmType = asmTypes[i];
-                ret[i] = (ICommandlineSystem)Activator.CreateInstance(asmType);
+                ret[i] = (ICommandlineSystem) Activator.CreateInstance(asmType);
             }
 
             return ret;
@@ -211,11 +164,63 @@ namespace CommandlineSystem
                 }
                 catch (Exception e)
                 {
-                    System.Console.WriteLine("Loading " + file + " failed.");
+                    Console.WriteLine("Loading " + file + " failed.");
                 }
             }
 
             return tools.ToArray();
+        }
+
+        private class BootstrapSystem : ICommandlineSystem
+        {
+
+            public string Name => "update";
+
+            public void Run(string[] args)
+            {
+                foreach (string s in args)
+                {
+                    if (Enum.TryParse(s, true, out UpdateType type))
+                    {
+                        if (type == UpdateType.Self && ApplicationUpdateUrl == null ||
+                            type == UpdateType.Systems && SystemUpdateUrl == null)
+                        {
+                            Console.WriteLine($"Can not Update {type}, no URL provided.");
+                        }
+                        else if (type == UpdateType.Self)
+                        {
+                            Bootstrap.Update(type, ApplicationUpdateUrl);
+                        }
+                        else if (type == UpdateType.Systems)
+                        {
+                            Bootstrap.Update(type, SystemUpdateUrl);
+                        }
+                    }
+                    else
+                    {
+                        Console.WriteLine($"Can not parse: {s}");
+                    }
+                }
+            }
+
+        }
+
+
+        private class HelpSystem : ICommandlineSystem
+        {
+
+            public string Name => "help";
+
+            public void Run(string[] args)
+            {
+                foreach (ICommandlineSystem commandlineSystem in Tools)
+                {
+                    Console.WriteLine(
+                                      $"Tool: {Path.GetFileName(Assembly.GetEntryAssembly().CodeBase)} {commandlineSystem.Name}"
+                                     );
+                }
+            }
+
         }
 
     }
